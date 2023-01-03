@@ -1,0 +1,31 @@
+name: Deploy
+on:
+  push:
+    branches:
+      - main
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+jobs:
+  deploy:
+    name: Deploy to tilde.club
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh/
+          echo "$SSH_KEY" > ~/.ssh/tilde.key
+          chmod 600 ~/.ssh/tilde.key
+          cat >>~/.ssh/config <<END
+          Host tilde
+            HostName tilde.club
+            User username
+            IdentityFile ~/.ssh/tilde.key
+          END
+          cat >>~/.ssh/known_hosts <<END
+          tilde.club ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBD9tKL5qBH/ZiWBO5UJSrZbnkyU8J3/VbV50/GUdHVgz++tQ4/04od5jZaSib77+uW1L3XKo5s78ikt0O/g1RJc=
+          END
+        env:
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+      - name: Fetch main
+        run: ssh tilde 'cd ~/public_html && git fetch && git reset --hard origin/main'
